@@ -9,7 +9,6 @@ var msgpack = require('msgpack-js');
 var Adapter = require('socket.io-adapter');
 var Emitter = require('events').EventEmitter;
 var debug = require('debug')('socket.io-ioredis');
-var async = require('async');
 
 /**
  * Module exports.
