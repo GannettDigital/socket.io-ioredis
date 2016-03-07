@@ -90,7 +90,7 @@ function adapter(uri, opts){
   Redis.prototype.getChannelName = function() {
     var args = Array.prototype.slice.call(arguments);
     args.unshift(prefix, this.nsp.name);
-    return args.join('#');
+    return args.join('#') + '#';
   };
 
   /**
