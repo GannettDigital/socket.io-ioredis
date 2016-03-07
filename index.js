@@ -187,6 +187,9 @@ function adapter(uri, opts){
     debug('adding %s to %s ', id, room);
     Adapter.prototype.add.call(this, id, room);
     runCommand('subscribe', this.getChannelName(room));
+    if (fn) {
+      fn(null);
+    }
   };
 
   /**
@@ -200,8 +203,18 @@ function adapter(uri, opts){
 
   Redis.prototype.del = function(id, room, fn){
     debug('removing %s from %s', id, room);
+    var hasRoom = this.rooms.hasOwnProperty(room);
     Adapter.prototype.del.call(this, id, room);
-    runCommand('unsubscribe', this.getChannelName(room));
+    if (hasRoom && !this.rooms[room]) {
+      runCommand('unsubscribe', this.getChannelName(room));
+      if (fn) {
+        fn(null);
+      }
+    } else {
+      if (fn) {
+        process.nextTick(fn.bind(null, null));
+      }
+    }
   };
 
   /**
@@ -217,15 +230,19 @@ function adapter(uri, opts){
 
     debug('removing %s from rooms %s', id, Object.keys(rooms));
 
-    Adapter.prototype.delAll.call(this, id);
-
     if (!rooms) {
-      return process.nextTick(fn.bind(null, null));
+      if (fn) {
+        process.nextTick(fn.bind(null, null));
+      }
+      return;
     } else {
-      var self = this;
-      runCommand('unsubscribe', Object.keys(rooms).map(function(room) {
-        return self.getChannelName(room);
-      }));
+      for (var room in rooms) {
+        this.del(id, room);
+      }
+      delete this.sids[id];
+      if (fn) {
+        fn(null);
+      }
     }
   };
 
