@@ -200,7 +200,11 @@ function adapter(uri, opts){
   Redis.prototype.del = function(id, room, fn){
     debug('removing %s from %s', id, room);
     Adapter.prototype.del.call(this, id, room);
-    runCommand('unsubscribe', this.getChannelName(room), fn);
+    if (!this.rooms[room]) {
+      runCommand('unsubscribe', this.getChannelName(room), fn);
+    } else if (fn) {
+      process.nextTick(fn.bind(null, null));
+    }
   };
 
   /**
@@ -222,9 +226,12 @@ function adapter(uri, opts){
       return process.nextTick(fn.bind(null, null));
     } else {
       var self = this;
-      runCommand('unsubscribe', Object.keys(rooms).map(function(room) {
-        return self.getChannelName(room);
-      }), fn);
+      runCommand('unsubscribe', Object.keys(rooms).reduce(function(memo, room) {
+        if (!self.rooms[room]) {
+          memo.push(self.getChannelName(room));
+        }
+        return memo;
+      }, []), fn);
     }
   };
 
