@@ -45,9 +45,6 @@ function adapter(uri, opts){
   var pub = opts.pubClient;
   var sub = opts.subClient;
   var prefix = opts.key || 'socket.io';
-  if (opts.offlineQueue) {
-    var offlineQueue = [];
-  }
 
   // init clients if needed
   if (!pub) pub = new redis(port, host);
@@ -70,15 +67,6 @@ function adapter(uri, opts){
     this.prefix = prefix;
 
     this.setupRedis();
-    if (offlineQueue) {
-      sub.on('ready', function() {
-        var currentQueue = offlineQueue.slice();
-        offlineQueue = []; // clear offline queue before processing the queue incase redis goes offline again
-        currentQueue.forEach(function(cmds) {
-          runCommand.apply(null, cmds);
-        });
-      });
-    }
   }
 
   Redis.prototype.setupRedis = function() {
@@ -150,26 +138,11 @@ function adapter(uri, opts){
 
   function runCommand(type) {
     var redisArgs = Array.prototype.slice.call(arguments, 1);
-    if (type == 'publish') {
+    debug('running redis command', type, redisArgs);
+    if (type === 'publish') {
       pub.publish.apply(pub, redisArgs);
     } else {
-      sub[type].apply(sub, redisArgs.concat(errorHandler(Array.prototype.slice.call(arguments))));
-    }
-  }
-
-  function errorHandler(args) {
-    var callback;
-    if (typeof args[args.length - 1] === 'function') {
-      callback = args[args.length - 1];
-      args = args.slice(0, args.length - 1);
-    }
-    return function(err) {
-      if (err && offlineQueue) {
-        offlineQueue.push(args);
-      }
-      if (callback){
-        callback(err);
-      }
+      sub[type].apply(sub, redisArgs);
     }
   }
 
@@ -200,7 +173,11 @@ function adapter(uri, opts){
   Redis.prototype.del = function(id, room, fn){
     debug('removing %s from %s', id, room);
     Adapter.prototype.del.call(this, id, room);
-    runCommand('unsubscribe', this.getChannelName(room), fn);
+    if (!this.rooms[room]) {
+      runCommand('unsubscribe', this.getChannelName(room), fn);
+    } else if (fn) {
+      process.nextTick(fn.bind(null, null));
+    }
   };
 
   /**
@@ -222,9 +199,12 @@ function adapter(uri, opts){
       return process.nextTick(fn.bind(null, null));
     } else {
       var self = this;
-      runCommand('unsubscribe', Object.keys(rooms).map(function(room) {
-        return self.getChannelName(room);
-      }), fn);
+      runCommand('unsubscribe', Object.keys(rooms).reduce(function(memo, room) {
+        if (!self.rooms[room]) {
+          memo.push(self.getChannelName(room));
+        }
+        return memo;
+      }, []), fn);
     }
   };
 
