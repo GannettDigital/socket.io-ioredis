@@ -7,7 +7,6 @@ var uid2 = require('uid2');
 var redis = require('ioredis');
 var msgpack = require('msgpack-js');
 var Adapter = require('socket.io-adapter');
-var Emitter = require('events').EventEmitter;
 var debug = require('debug')('socket.io-ioredis');
 
 /**
@@ -186,7 +185,7 @@ function adapter(uri, opts){
   Redis.prototype.add = function(id, room, fn){
     debug('adding %s to %s ', id, room);
     Adapter.prototype.add.call(this, id, room);
-    runCommand('subscribe', this.getChannelName(room));
+    runCommand('subscribe', this.getChannelName(room), fn);
   };
 
   /**
@@ -201,7 +200,7 @@ function adapter(uri, opts){
   Redis.prototype.del = function(id, room, fn){
     debug('removing %s from %s', id, room);
     Adapter.prototype.del.call(this, id, room);
-    runCommand('unsubscribe', this.getChannelName(room));
+    runCommand('unsubscribe', this.getChannelName(room), fn);
   };
 
   /**
@@ -225,7 +224,7 @@ function adapter(uri, opts){
       var self = this;
       runCommand('unsubscribe', Object.keys(rooms).map(function(room) {
         return self.getChannelName(room);
-      }));
+      }), fn);
     }
   };
 
