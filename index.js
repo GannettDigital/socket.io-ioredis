@@ -191,13 +191,14 @@ function adapter(uri, opts){
   Redis.prototype.delAll = function(id, fn){
     var rooms = this.sids[id];
 
-    debug('removing %s from rooms %s', id, Object.keys(rooms));
+    debug('removing %s from all rooms', id );
 
     Adapter.prototype.delAll.call(this, id);
 
     if (!rooms) {
       return process.nextTick(fn.bind(null, null));
     } else {
+        debug('removing %s from rooms %s', id , Object.keys(rooms));
       var self = this;
       runCommand('unsubscribe', Object.keys(rooms).reduce(function(memo, room) {
         if (!self.rooms[room]) {
