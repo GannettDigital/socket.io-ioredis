@@ -196,7 +196,7 @@ function adapter(uri, opts){
     Adapter.prototype.delAll.call(this, id);
 
     if (!rooms) {
-      return process.nextTick(fn.bind(null, null));
+      return fn ? process.nextTick(fn.bind(null, null)) : false;
     } else {
         debug('removing %s from rooms %s', id , Object.keys(rooms));
       var self = this;
