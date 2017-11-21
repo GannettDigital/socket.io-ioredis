@@ -11,7 +11,7 @@
     "test": "mocha"
   },
   "dependencies": {
-    "debug": "2.2.0",
+    "debug": "2.6.9",
     "ioredis": "^1.7.3",
     "msgpack-js": "0.3.0",
     "socket.io-adapter": "^0.4.0",
